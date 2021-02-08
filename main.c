@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <immintrin.h>
+#include <time.h>
 
 #define L_SF8(ADDR) *((const simd_f8 *)(ADDR))
 
@@ -64,6 +65,18 @@ void print_mat(float** m, size_t size) {
 	}
 }
 
+float checksum(float** mat, size_t size) {
+	size_t i, j;
+	float ret = 0.f;	
+
+	for(i = 0; i < size; i++) {
+		for(j = 0; j < size; j++)
+			ret += mat[i][j];
+	}
+
+	return ret;
+}
+
 void print_f8(simd_f8 num) {
 	int i = 0;
 
@@ -74,19 +87,27 @@ void print_f8(simd_f8 num) {
 	printf("\n");
 }
 
+#define PRINT_MAT 0
 void naive_mult(float** a, float** b, int size) {
 	int i, j, k;
 
 	float** res = gen_mat_f(size, 0);
+	struct timeval t1, t2;
 
+	gettimeofday(&t1, NULL);
 	for(i = 0; i < size; i++) {
 		for(j = 0; j < size; j++) {
 			for(k = 0; k < size; k++)
 				res[i][j] += a[i][k] * b[k][j];
 		}
 	}
-
-	print_mat(res, size);
+	gettimeofday(&t2, NULL);
+	
+	printf("Naive Checksum: %f in %u seconds\n", checksum(res, size), t2.tv_sec - t1.tv_sec);
+	free_mat_f(res, size);
+	
+	if(PRINT_MAT)
+		print_mat(res, size);
 }
 
 
@@ -126,7 +147,7 @@ void mult_f_t3(float** a, float** b, int size) {
 	//int ai, bi, ii;
 
 	//simd_f8 a_r, b_r;
-	
+	struct timeval t1, t2;
 	float** c = gen_mat_f(size, 0);
 	
 	/* block count, max, remaining for a and b  matrices */
@@ -165,8 +186,9 @@ void mult_f_t3(float** a, float** b, int size) {
 			}
 		}
 	}*/
+	gettimeofday(&t1, NULL);
 	
-	printf("A max=%u B max=%u", bc_a_max, bc_b_max);
+	//printf("A max=%u B max=%u", bc_a_max, bc_b_max);
 	for(bc_a = 0; bc_a < bc_a_max + (bc_a_r ? 1 : 0); bc_a++) {
 		for(bc_b = 0; bc_b < bc_b_max + (bc_b_r ? 1 : 0); bc_b++) {
 			int b_block_size = bc_b < bc_b_max ? AVX_REG_B_MAX : bc_b_r;
@@ -186,8 +208,14 @@ void mult_f_t3(float** a, float** b, int size) {
 	calc_block(a, AVX_REG_A_MAX, 1, 0, AVX_REG_B_MAX, b, c, size);
 	calc_block(a, AVX_REG_A_MAX, 2, 0, AVX_REG_B_MAX, b, c, size);
 	calc_block(a, AVX_REG_A_MAX, 1, 0, AVX_REG_B_MAX, b, c, size);*/
+	gettimeofday(&t2, NULL);
+	printf("SIMD  Checksum: %f in %u seconds\n", checksum(c, size), t2.tv_sec - t1.tv_sec);
+	free_mat_f(c, size);
+
 	printf("Done!\n");
-	print_mat(c, size);
+
+	if(PRINT_MAT)
+		print_mat(c, size);
 
 	/*for(ii = 0; ii < size; ii++) {
 		for(bi = 0; bi < BZ; bi++) {
@@ -309,15 +337,17 @@ void run() {
 	float **m_1;
 	float **m_2;
 	int i, j;
-	int size = 80;
+	int size = 12400;
 
 	m_1 = gen_mat_f(size, 1);
 	m_2 = gen_mat_f(size, 1);
 
-	print_mat(m_1, size);
-	print_mat(m_2, size);
+	if(PRINT_MAT) {
+		print_mat(m_1, size);
+		print_mat(m_2, size);
+	}
 
-	naive_mult(m_1, m_2, size);
+	//naive_mult(m_1, m_2, size);
 	mult_f_t3(m_1, m_2, size);
 
 	free_mat_f(m_1, size);

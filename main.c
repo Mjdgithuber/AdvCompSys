@@ -69,29 +69,18 @@ void mult_f(float** a, float** b) {
 	for(row = 0; row < 8; row++) {
 		for(col = 0; col < 8; col++)
 			c[row][col] = 0.f;
-	}	
-
-	printf("Hello1\n");
+	}
 
 	for(row = 0; row < 8; row++) {
-		printf("Hello2\n");
-		//simd_f8 a_r = L_SF8(a[row]);
-		simd_f8 a_r = _mm256_load_ps(a[row]);
+		simd_f8 a_r;
 		simd_f8 b_r;
-		printf("Hello3\n");
 
 		for(col = 0; col < 8; col++) {
+			a_r = _mm256_broadcast_ss(a[row] + col);
 			b_r = _mm256_load_ps(b[col]);
-			//b_r = L_SF8(b[col]);
-			
-			printf("Hello\n");
-			//print_f8(_mm256_mul_ps(a_r, b_r));		
 			
 			_mm256_store_ps(c[row], _mm256_load_ps(c[row]) +  _mm256_mul_ps(a_r, b_r));
-			//*((simd_f8*)c[row]) += _mm256_mul_ps(a_r, b_r);
-			//break;
 		}
-		break;
 	}
 
 	print_mat(c, 8);

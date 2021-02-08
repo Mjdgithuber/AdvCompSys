@@ -89,7 +89,7 @@ void naive_mult(float** a, float** b, int size) {
 	print_mat(res, size);
 }
 
-#define AZ 1
+#define AZ 2
 #define BZ 2
 void mult_f_t2(float** a, float** b, int size) {
 	size_t row, col;
@@ -97,8 +97,9 @@ void mult_f_t2(float** a, float** b, int size) {
 	simd_f8 csum[AZ][BZ] = {{0.0}};
 	int ai, bi, ii;
 
-	//float** c = gen_mat_f(8);
 	simd_f8 a_r, b_r;
+	
+	float** c = gen_mat_f(size, 0);
 
 	for(ii = 0; ii < size; ii++) {
 		for(bi = 0; bi < BZ; bi++) {
@@ -110,11 +111,23 @@ void mult_f_t2(float** a, float** b, int size) {
 			}
 		}
 	}
+	
+	for(ai = 0; ai < AZ; ai++) {
+		for(bi = 0; bi < BZ; bi++) {
+			_mm256_store_ps(&c[ai][bi*8], csum[ai][bi]);
+		}
+	}
+	
 	printf("Done!\n");
 	
 	//for(ai = 0; ai < 3; ai++
 	print_f8(csum[0][0]);
 	print_f8(csum[0][1]);
+
+	printf("\n\nFinal:\n");
+	print_mat(c, 16);
+
+
 	//printf("\nEmma:%f\n", *((float*)&csum[0][0]));
 	//print_mat((float**)csum, 1);
 

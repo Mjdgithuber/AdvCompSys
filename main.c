@@ -9,7 +9,18 @@ typedef int simd_f __attribute__ ((vector_size (16)));
 
 typedef float simd_f8 __attribute__ ((vector_size (32)));
 
-float** gen_mat_f(size_t size) {
+float** fill_mat_f(float** mat, size_t size) {
+	size_t i, j;
+
+	for(i = 0; i < size; i++) {
+		for(j = 0; j < size; j++)
+			mat[i][j] = (rand() / (float) RAND_MAX) * (1);
+	}
+
+	return mat;
+}
+
+float** gen_mat_f(size_t size, char fill) {
 	size_t i, j;
 
 	//float (*a)[4][4] = _aligned_malloc(sizeof(*a));
@@ -18,8 +29,8 @@ float** gen_mat_f(size_t size) {
 	float** ptr = malloc(size * sizeof(float*));
 	for(i = 0; i < size; i++) {
 		ptr[i] = _mm_malloc(size * sizeof(float), 32);
-		for(j = 0; j < size; j++)
-			ptr[i][j] = (rand() / (float) RAND_MAX) * (1);
+		//for(j = 0; j < size; j++)
+			//ptr[i][j] = (rand() / (float) RAND_MAX) * (1);
 	}
 
 	/*float** ptr = malloc(size * sizeof(float*));
@@ -30,7 +41,7 @@ float** gen_mat_f(size_t size) {
 	}*/
 
 
-	return ptr;
+	return fill ? fill_mat_f(ptr, size) : ptr;
 }
 
 void free_mat_f(float** ptr, size_t size) {
@@ -56,16 +67,84 @@ void print_mat(float** m, size_t size) {
 void print_f8(simd_f8 num) {
 	int i = 0;
 
+	printf("Printing f8:\n");
 	for(i = 0; i < 8; i++)
 		printf("%f ", ((float*)(&num))[i]);
 
 	printf("\n");
 }
 
+void naive_mult(float** a, float** b, int size) {
+	int i, j, k;
+
+	float** res = gen_mat_f(size, 0);
+
+	for(i = 0; i < size; i++) {
+		for(j = 0; j < size; j++) {
+			for(k = 0; k < size; k++)
+				res[i][j] += a[i][k] * b[k][j];
+		}
+	}
+
+	print_mat(res, size);
+}
+
+#define AZ 1
+#define BZ 2
+void mult_f_t2(float** a, float** b, int size) {
+	size_t row, col;
+	
+	simd_f8 csum[AZ][BZ] = {{0.0}};
+	int ai, bi, ii;
+
+	//float** c = gen_mat_f(8);
+	simd_f8 a_r, b_r;
+
+	for(ii = 0; ii < size; ii++) {
+		for(bi = 0; bi < BZ; bi++) {
+			b_r = _mm256_load_ps(b[ii] + 8*bi);
+			for(ai = 0; ai < AZ; ai++) {
+				a_r = _mm256_broadcast_ss(a[ai] + ii);
+				//print_f8(csum[ai][bi] + _mm256_mul_ps(a_r, b_r));
+				csum[ai][bi] += _mm256_mul_ps(a_r, b_r);
+			}
+		}
+	}
+	printf("Done!\n");
+	
+	//for(ai = 0; ai < 3; ai++
+	print_f8(csum[0][0]);
+	print_f8(csum[0][1]);
+	//printf("\nEmma:%f\n", *((float*)&csum[0][0]));
+	//print_mat((float**)csum, 1);
+
+	/*for(row = 0; row < 8; row++) {
+		for(col = 0; col < 8; col++)
+			c[row][col] = 0.f;
+	}
+
+	for(row = 0; row < 8; row++) {
+		simd_f8 a_r;
+		simd_f8 b_r;
+
+
+		b_r = _mm256_load_ps(b[row]);
+		for(col = 0; col < 8; col++) {
+			a_r = _mm256_broadcast_ss(a[col] + row);
+			//a_r = _mm256_broadcast_ss(a[row] + col);
+			//b_r = _mm256_load_ps(b[col]);
+			
+			_mm256_store_ps(c[col], _mm256_load_ps(c[col]) +  _mm256_mul_ps(a_r, b_r));
+		}
+	}
+
+	print_mat(c, 8);*/
+}
+
 void mult_f(float** a, float** b) {
 	size_t row, col;
 
-	float** c = gen_mat_f(8);
+	float** c = gen_mat_f(8, 1);
 	for(row = 0; row < 8; row++) {
 		for(col = 0; col < 8; col++)
 			c[row][col] = 0.f;
@@ -75,11 +154,14 @@ void mult_f(float** a, float** b) {
 		simd_f8 a_r;
 		simd_f8 b_r;
 
+
+		b_r = _mm256_load_ps(b[row]);
 		for(col = 0; col < 8; col++) {
-			a_r = _mm256_broadcast_ss(a[row] + col);
-			b_r = _mm256_load_ps(b[col]);
+			a_r = _mm256_broadcast_ss(a[col] + row);
+			//a_r = _mm256_broadcast_ss(a[row] + col);
+			//b_r = _mm256_load_ps(b[col]);
 			
-			_mm256_store_ps(c[row], _mm256_load_ps(c[row]) +  _mm256_mul_ps(a_r, b_r));
+			_mm256_store_ps(c[col], _mm256_load_ps(c[col]) +  _mm256_mul_ps(a_r, b_r));
 		}
 	}
 
@@ -92,15 +174,16 @@ void run() {
 	float **m_1;
 	float **m_2;
 	int i, j;
-	int size = 8;
+	int size = 32;
 
-	m_1 = gen_mat_f(size);
-	m_2 = gen_mat_f(size);
+	m_1 = gen_mat_f(size, 1);
+	m_2 = gen_mat_f(size, 1);
 
 	print_mat(m_1, size);
 	print_mat(m_2, size);
 
-	mult_f(m_1, m_2);
+	naive_mult(m_1, m_2, size);
+	mult_f_t2(m_1, m_2, size);
 
 	free_mat_f(m_1, size);
 	free_mat_f(m_2, size);

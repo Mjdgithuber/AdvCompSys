@@ -65,31 +65,31 @@ void print_f8(simd_f8 num) {
 void mult_f(float** a, float** b) {
 	size_t row, col;
 
-	//float** bc = gen_mat_f(19);
-	//float** bb = gen_mat_f(8);
 	float** c = gen_mat_f(8);
-	//float* store = calloc(100, sizeof(float));
+	for(row = 0; row < 8; row++) {
+		for(col = 0; col < 8; col++)
+			c[row][col] = 0.f;
+	}	
 
-	//print_mat(bb,8);
 	printf("Hello1\n");
 
 	for(row = 0; row < 8; row++) {
 		printf("Hello2\n");
-		simd_f8 a_r = L_SF8(a[row]);
+		//simd_f8 a_r = L_SF8(a[row]);
+		simd_f8 a_r = _mm256_load_ps(a[row]);
 		simd_f8 b_r;
 		printf("Hello3\n");
 
 		for(col = 0; col < 8; col++) {
-			//aprintf("\n\n%f\n\n", b[0][col]);
-			//b_r = *((simd_f8*)b[0]);
-			b_r = L_SF8(b[col]);
+			b_r = _mm256_load_ps(b[col]);
+			//b_r = L_SF8(b[col]);
 			
 			printf("Hello\n");
 			//print_f8(_mm256_mul_ps(a_r, b_r));		
 			
-			_mm256_store_ps(c[row], _mm256_mul_ps(a_r, b_r));
+			_mm256_store_ps(c[row], _mm256_load_ps(c[row]) +  _mm256_mul_ps(a_r, b_r));
 			//*((simd_f8*)c[row]) += _mm256_mul_ps(a_r, b_r);
-			break;
+			//break;
 		}
 		break;
 	}
@@ -108,16 +108,10 @@ void run() {
 	m_1 = gen_mat_f(size);
 	m_2 = gen_mat_f(size);
 
-	/*for(i = 0; i < size; i++) {
-		for(j = 0; j < size; j++)
-			printf("%f ", m_1[i][j]);
-		printf("\n");
-	}*/
 	print_mat(m_1, size);
-	//print_mat(m_2, size);
+	print_mat(m_2, size);
 
 	mult_f(m_1, m_2);
-	//mult_f(m_1, gen_mat_f(size));
 
 	free_mat_f(m_1, size);
 	free_mat_f(m_2, size);

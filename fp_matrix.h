@@ -1,9 +1,6 @@
 #ifndef __FP__MATRIX__
 #define __FP__MATRIX__
 
-/* Access to AVX C wrappers */
-#include <immintrin.h>
-
 typedef unsigned char BOOL;
 
 /* Returns a 2D square matrix with length and

@@ -89,6 +89,128 @@ void naive_mult(float** a, float** b, int size) {
 	print_mat(res, size);
 }
 
+
+
+
+#define AVX_REG_A_MAX 3
+#define AVX_REG_B_MAX 4
+
+void calc_block(float** a, size_t a_block_size, size_t a_block_index, size_t b_block_index, size_t b_block_size, float** b, float** c, size_t size) {
+	simd_f8 a_r, b_r;
+	simd_f8 c_local[AVX_REG_A_MAX][AVX_REG_B_MAX] = {{0.0}};
+	size_t row_count, a_bi, b_bi;
+
+	for(row_count = 0; row_count < size; row_count++) {
+		for(b_bi = 0; b_bi < b_block_size; b_bi++) {
+			b_r = _mm256_load_ps(b[row_count] + 8*(b_bi + b_block_index * AVX_REG_B_MAX));
+
+			for(a_bi = 0; a_bi < a_block_size; a_bi++) {
+				a_r = _mm256_broadcast_ss(a[a_bi + a_block_index*AVX_REG_A_MAX] + row_count);
+				c_local[a_bi][b_bi] += _mm256_mul_ps(a_r, b_r);
+			}
+		}
+	}
+
+	for(a_bi = 0; a_bi < a_block_size; a_bi++) {
+		for(b_bi = 0; b_bi < b_block_size; b_bi++) {
+			_mm256_store_ps(&c[a_bi + a_block_index*AVX_REG_A_MAX][(b_bi + b_block_index*AVX_REG_B_MAX)*8], c_local[a_bi][b_bi]);
+		}
+	}
+
+}
+
+void mult_f_t3(float** a, float** b, int size) {
+	//size_t row, col;
+	
+	//simd_f8 csum[AZ][BZ] = {{0.0}};
+	//int ai, bi, ii;
+
+	//simd_f8 a_r, b_r;
+	
+	float** c = gen_mat_f(size, 0);
+	
+	/* block count, max, remaining for a and b  matrices */
+	size_t bc_a = 0, bc_b = 0;
+	size_t bc_a_max = size / (AVX_REG_A_MAX);
+	size_t bc_b_max = size / (AVX_REG_B_MAX * 8);
+	size_t bc_a_r = size % (AVX_REG_A_MAX);
+	size_t bc_b_r = (size % (AVX_REG_B_MAX * 8)) / 8;
+	
+	size_t row_count;
+
+	/* simd reg temps */
+	simd_f8 a_r, b_r;
+	simd_f8 c_local[AVX_REG_A_MAX][AVX_REG_B_MAX] = {{0.0}};
+
+	/* a and b block indices */
+	size_t a_bi, b_bi;
+
+	/*for(bc_a = 0; bc_a < bc_a_max + bc_a_r; bc_a++) {
+		for(bc_b = 0; bc_b < bc_b_max + bc_b_r; bc_b++) {
+			for(row_count = 0; row_count < size; row_count++) {
+				for(b_bi = 0; b_bi < (bc_b < bc_b_max) ? AVX_REG_B_MAX : bc_b_r; b_bi++) {
+					b_r = _mm256_load_ps(b[row_count] + 8*(b_bi + bc_b * AVX_REG_B_MAX));
+					for(a_bi = 0; a_bi < (bc_a < bc_a_max) ? AVX_REG_A_MAX : bc_a_r; a_bi++) {
+						a_r = _mm256_broadcast_ss(a[a_bi + bc_a*AVX_REG_A_MAX] + row_count);
+						c_local[a_bi][b_bi] += _mm256_mul_ps(a_r, b_r);
+					}
+				}
+			}
+
+			
+			for(a_bi = 0; a_bi < (bc_a < bc_a_max) ? AVX_REG_A_MAX : bc_a_r; a_bi++) {
+				for(b_bi = 0; b_bi < (bc_b < bc_b_max) ? AVX_REG_B_MAX : bc_b_r; b_bi++) {
+					_mm256_store_ps(&c[a_bi + bc_a*AVX_REG_A_MAX][(b_bi + bc_b*AVX_REG_B_MAX)*8], c_local[a_bi][b_bi]);
+				}
+			}
+		}
+	}*/
+	
+	printf("A max=%u B max=%u", bc_a_max, bc_b_max);
+	for(bc_a = 0; bc_a < bc_a_max + (bc_a_r ? 1 : 0); bc_a++) {
+		for(bc_b = 0; bc_b < bc_b_max + (bc_b_r ? 1 : 0); bc_b++) {
+			int b_block_size = bc_b < bc_b_max ? AVX_REG_B_MAX : bc_b_r;
+			int a_block_size = bc_a < bc_a_max ? AVX_REG_A_MAX : bc_a_r;
+			calc_block(a, a_block_size, bc_a, bc_b, b_block_size, b, c, size);
+		}
+	}
+	
+	// working
+	/*for(a_bi = 0; a_bi < 32/3; a_bi++) {
+		calc_block(a, AVX_REG_A_MAX, a_bi, 0, AVX_REG_B_MAX, b, c, size);
+	}
+	calc_block(a, 2, 10, 0, AVX_REG_B_MAX, b, c, size);*/
+
+
+	/*calc_block(a, AVX_REG_A_MAX, 0, 0, AVX_REG_B_MAX, b, c, size);
+	calc_block(a, AVX_REG_A_MAX, 1, 0, AVX_REG_B_MAX, b, c, size);
+	calc_block(a, AVX_REG_A_MAX, 2, 0, AVX_REG_B_MAX, b, c, size);
+	calc_block(a, AVX_REG_A_MAX, 1, 0, AVX_REG_B_MAX, b, c, size);*/
+	printf("Done!\n");
+	print_mat(c, size);
+
+	/*for(ii = 0; ii < size; ii++) {
+		for(bi = 0; bi < BZ; bi++) {
+			b_r = _mm256_load_ps(b[ii] + 8*bi);
+			for(ai = 0; ai < AZ; ai++) {
+				a_r = _mm256_broadcast_ss(a[ai] + ii);
+				csum[ai][bi] += _mm256_mul_ps(a_r, b_r);
+			}
+		}
+	}
+	
+	for(ai = 0; ai < AZ; ai++) {
+		for(bi = 0; bi < BZ; bi++) {
+			_mm256_store_ps(&c[ai][bi*8], csum[ai][bi]);
+		}
+	}
+	
+	printf("Done!\n");
+
+	printf("\n\nFinal:\n");
+	print_mat(c, 16);*/
+}
+
 #define AZ 2
 #define BZ 2
 void mult_f_t2(float** a, float** b, int size) {
@@ -187,7 +309,7 @@ void run() {
 	float **m_1;
 	float **m_2;
 	int i, j;
-	int size = 32;
+	int size = 80;
 
 	m_1 = gen_mat_f(size, 1);
 	m_2 = gen_mat_f(size, 1);
@@ -196,7 +318,7 @@ void run() {
 	print_mat(m_2, size);
 
 	naive_mult(m_1, m_2, size);
-	mult_f_t2(m_1, m_2, size);
+	mult_f_t3(m_1, m_2, size);
 
 	free_mat_f(m_1, size);
 	free_mat_f(m_2, size);

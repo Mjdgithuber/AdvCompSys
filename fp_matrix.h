@@ -20,6 +20,11 @@ float** fp_mat_rand(float** mat, size_t sz);
  * sz */
 float** mult_fp_mat(float** a, float** b, size_t sz);
 
+/* Returns the resultant 2D matrix of the
+ * multiplication of a and b both of size
+ * sz.  This is not optimized */
+float** mult_fp_mat_naive(float** a, float** b, size_t sz);
+
 /* Frees the 2D matrix allocation. NOTE: due
  * to aligned allocation, rows must not be
  * freed via free() */

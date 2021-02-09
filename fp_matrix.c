@@ -104,7 +104,6 @@ static void calc_block(float** a, size_t a_block_size, size_t a_block_index, siz
 }
 
 float** mult_fp_mat(float** a, float** b, size_t sz) {
-	struct timeval t1, t2;
 	float** c = gen_fp_mat(sz, 0);
 	
 	/* block count, max, remaining for a and b  matrices */
@@ -131,5 +130,19 @@ float** mult_fp_mat(float** a, float** b, size_t sz) {
 		}
 	}
 
+	return c;
+}
+
+float** mult_fp_mat_naive(float** a, float** b, size_t sz) {
+	float** c = gen_fp_mat(sz, 0);
+	size_t i, j, k;
+
+	/* Compute dot product */
+	for(i = 0; i < sz; i++) {
+		for(j = 0; j < sz; j++) {
+			for(k = 0; k < sz; k++)
+				c[i][j] += a[i][k] * b[k][j];
+		}
+	}
 	return c;
 }

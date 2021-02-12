@@ -81,6 +81,93 @@ float fp_mat_checksum(float** mat, size_t sz) {
 }
 
 static void calc_block(float** a, size_t a_block_size, size_t a_block_index, size_t b_block_index, size_t b_block_size, float** b, float** c, size_t size) {
+	simd_f8 at, bt;
+	//simd_f8 c_local[AVX_REG_A_MAX][AVX_REG_B_MAX] = {{0.0}};
+	size_t row_count, a_bi, b_bi;
+
+	register simd_f8 t0,t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11;
+
+	simd_f8 z = (simd_f8) z;
+	t0 = z; t1 = z; t2 = z; t3 = z; t4 = z; t5 = z; t6 = z; t7 = z; t8 = z; t9 = z; t10 = z; t11 = z;
+	for(row_count = 0; row_count < size; row_count++) {
+		bt = _mm256_load_ps(b[row_count] + 8*(0 + b_block_index * AVX_REG_B_MAX));
+		at = _mm256_broadcast_ss(a[0 + a_block_index*AVX_REG_A_MAX] + row_count);
+		t0 += _mm256_mul_ps(at, bt);
+
+		at = _mm256_broadcast_ss(a[1 + a_block_index*AVX_REG_A_MAX] + row_count);
+		t4 += _mm256_mul_ps(at, bt);
+
+		at = _mm256_broadcast_ss(a[2 + a_block_index*AVX_REG_A_MAX] + row_count);
+		t8 += _mm256_mul_ps(at, bt);
+
+
+		bt = _mm256_load_ps(b[row_count] + 8*(1 + b_block_index * AVX_REG_B_MAX));
+		at = _mm256_broadcast_ss(a[0 + a_block_index*AVX_REG_A_MAX] + row_count);
+		t1 += _mm256_mul_ps(at, bt);
+
+		at = _mm256_broadcast_ss(a[1 + a_block_index*AVX_REG_A_MAX] + row_count);
+		t5 += _mm256_mul_ps(at, bt);
+
+		at = _mm256_broadcast_ss(a[2 + a_block_index*AVX_REG_A_MAX] + row_count);
+		t9 += _mm256_mul_ps(at, bt);
+
+
+		bt = _mm256_load_ps(b[row_count] + 8*(2 + b_block_index * AVX_REG_B_MAX));
+		at = _mm256_broadcast_ss(a[0 + a_block_index*AVX_REG_A_MAX] + row_count);
+		t2 += _mm256_mul_ps(at, bt);
+
+		at = _mm256_broadcast_ss(a[1 + a_block_index*AVX_REG_A_MAX] + row_count);
+		t6 += _mm256_mul_ps(at, bt);
+
+		at = _mm256_broadcast_ss(a[2 + a_block_index*AVX_REG_A_MAX] + row_count);
+		t10 += _mm256_mul_ps(at, bt);
+
+
+		bt = _mm256_load_ps(b[row_count] + 8*(3 + b_block_index * AVX_REG_B_MAX));
+
+		at = _mm256_broadcast_ss(a[0 + a_block_index*AVX_REG_A_MAX] + row_count);
+		t3 += _mm256_mul_ps(at, bt);
+
+		at = _mm256_broadcast_ss(a[1 + a_block_index*AVX_REG_A_MAX] + row_count);
+		t7 += _mm256_mul_ps(at, bt);
+
+		at = _mm256_broadcast_ss(a[2 + a_block_index*AVX_REG_A_MAX] + row_count);
+		t11 += _mm256_mul_ps(at, bt);
+	}
+
+	_mm256_store_ps(&c[0 + a_block_index*AVX_REG_A_MAX][(0 + b_block_index*AVX_REG_B_MAX)*8], t0);
+	_mm256_store_ps(&c[0 + a_block_index*AVX_REG_A_MAX][(1 + b_block_index*AVX_REG_B_MAX)*8], t1);
+	_mm256_store_ps(&c[0 + a_block_index*AVX_REG_A_MAX][(2 + b_block_index*AVX_REG_B_MAX)*8], t2);
+	_mm256_store_ps(&c[0 + a_block_index*AVX_REG_A_MAX][(3 + b_block_index*AVX_REG_B_MAX)*8], t3);
+	_mm256_store_ps(&c[1 + a_block_index*AVX_REG_A_MAX][(0 + b_block_index*AVX_REG_B_MAX)*8], t4);
+	_mm256_store_ps(&c[1 + a_block_index*AVX_REG_A_MAX][(1 + b_block_index*AVX_REG_B_MAX)*8], t5);
+	_mm256_store_ps(&c[1 + a_block_index*AVX_REG_A_MAX][(2 + b_block_index*AVX_REG_B_MAX)*8], t6);
+	_mm256_store_ps(&c[1 + a_block_index*AVX_REG_A_MAX][(3 + b_block_index*AVX_REG_B_MAX)*8], t7);
+	_mm256_store_ps(&c[2 + a_block_index*AVX_REG_A_MAX][(0 + b_block_index*AVX_REG_B_MAX)*8], t8);
+	_mm256_store_ps(&c[2 + a_block_index*AVX_REG_A_MAX][(1 + b_block_index*AVX_REG_B_MAX)*8], t9);
+	_mm256_store_ps(&c[2 + a_block_index*AVX_REG_A_MAX][(2 + b_block_index*AVX_REG_B_MAX)*8], t10);
+	_mm256_store_ps(&c[2 + a_block_index*AVX_REG_A_MAX][(3 + b_block_index*AVX_REG_B_MAX)*8], t11);
+
+
+	/*for(row_count = 0; row_count < size; row_count++) {
+		for(b_bi = 0; b_bi < b_block_size; b_bi++) {
+			b_r = _mm256_load_ps(b[row_count] + 8*(b_bi + b_block_index * AVX_REG_B_MAX));
+
+			for(a_bi = 0; a_bi < a_block_size; a_bi++) {
+				a_r = _mm256_broadcast_ss(a[a_bi + a_block_index*AVX_REG_A_MAX] + row_count);
+				c_local[a_bi][b_bi] += _mm256_mul_ps(a_r, b_r);
+			}
+		}
+	}
+
+	for(a_bi = 0; a_bi < a_block_size; a_bi++) {
+		for(b_bi = 0; b_bi < b_block_size; b_bi++) {
+			_mm256_store_ps(&c[a_bi + a_block_index*AVX_REG_A_MAX][(b_bi + b_block_index*AVX_REG_B_MAX)*8], c_local[a_bi][b_bi]);
+		}
+	}*/
+}
+
+static void calc_block_(float** a, size_t a_block_size, size_t a_block_index, size_t b_block_index, size_t b_block_size, float** b, float** c, size_t size) {
 	simd_f8 a_r, b_r;
 	simd_f8 c_local[AVX_REG_A_MAX][AVX_REG_B_MAX] = {{0.0}};
 	size_t row_count, a_bi, b_bi;
@@ -126,7 +213,11 @@ float** mult_fp_mat(float** a, float** b, size_t sz) {
 		for(bc_b = 0; bc_b < bc_b_max + (bc_b_r ? 1 : 0); bc_b++) {
 			int b_block_size = bc_b < bc_b_max ? AVX_REG_B_MAX : bc_b_r;
 			int a_block_size = bc_a < bc_a_max ? AVX_REG_A_MAX : bc_a_r;
-			calc_block(a, a_block_size, bc_a, bc_b, b_block_size, b, c, sz);
+
+			if(b_block_size != AVX_REG_B_MAX || a_block_size != AVX_REG_A_MAX)
+				calc_block_(a, a_block_size, bc_a, bc_b, b_block_size, b, c, sz);
+			else
+				calc_block(a, a_block_size, bc_a, bc_b, b_block_size, b, c, sz);
 		}
 	}
 

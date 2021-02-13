@@ -76,14 +76,6 @@ short int si_mat_checksum(short int** mat, size_t sz) {
 	return ret;
 }
 
-
-static void print_num(__m128i num) {
-int i;
-for(i = 0; i < 8; i++)
-printf("%hd ", *( ((short int*)(&num)) + i) );
-printf("\n");
-}
-
 static void calc_block(short int** a, size_t a_block_size, size_t a_block_index, size_t b_block_index, size_t b_block_size, short int** b, short int** c, size_t size) {
 	__m128i a_r, b_r;
 	__m128i c_local[AVX_REG_A_MAX][AVX_REG_B_MAX] = {{{0.0}}};
@@ -92,20 +84,15 @@ static void calc_block(short int** a, size_t a_block_size, size_t a_block_index,
 	for(row_count = 0; row_count < size; row_count++) {
 		for(b_bi = 0; b_bi < b_block_size; b_bi++) {
 			b_r = _mm_loadu_si128((__m128i*) (b[row_count] + 8*(b_bi + b_block_index * AVX_REG_B_MAX)));
-			//print_num(b_r);
 			for(a_bi = 0; a_bi < a_block_size; a_bi++) {
 				a_r = _mm_set1_epi16(a[a_bi + a_block_index*AVX_REG_A_MAX][row_count]);
-				//print_num(a_r);
-				
 				c_local[a_bi][b_bi] = _mm_add_epi16(c_local[a_bi][b_bi], _mm_mullo_epi16(a_r, b_r));
-				//c_local[a_bi][b_bi] += _mm_mullo_epi16(a_r, b_r);
 			}
 		}
 	}
 
 	for(a_bi = 0; a_bi < a_block_size; a_bi++) {
 		for(b_bi = 0; b_bi < b_block_size; b_bi++) {
-			print_num(c_local[a_bi][b_bi]);
 			_mm_store_si128((__m128i*) (&c[a_bi + a_block_index*AVX_REG_A_MAX][(b_bi + b_block_index*AVX_REG_B_MAX)*8]), c_local[a_bi][b_bi]);
 		}
 	}

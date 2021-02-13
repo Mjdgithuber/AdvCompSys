@@ -4,7 +4,7 @@
 /* Access to AVX C wrappers */
 #include <immintrin.h>
 
-#include "fp_matrix.h"
+#include "si_matrix.h"
 
 /* Used to align memory on boundary for
  * AVX SIMD instructions */
@@ -15,9 +15,11 @@
 #define AVX_REG_A_MAX 3
 #define AVX_REG_B_MAX 4
 
+typedef int simd_f __attribute__ ((vector_size (16)));
+
 typedef float simd_f8 __attribute__ ((vector_size (32)));
 
-float** gen_fp_mat(size_t sz, BOOL randomize) {
+short int** gen_si_mat(size_t sz, BOOL randomize) {
 	size_t i;
 	
 	/* Many AVX instructions are only valid
@@ -25,27 +27,27 @@ float** gen_fp_mat(size_t sz, BOOL randomize) {
          * aligned data.  NOTE: this cannot be
          * freed safely with free(), _mm_free()
          * must be used! */
-	float** ptr = malloc(sz * sizeof(float*));
+	short int** ptr = malloc(sz * sizeof(short int*));
 	for(i = 0; i < sz; i++)
-		ptr[i] = _mm_malloc(sz * sizeof(float), BOUNDARY_ALIGNMENT);
+		ptr[i] = _mm_malloc(sz * sizeof(short int), BOUNDARY_ALIGNMENT);
 
-	return randomize ? fp_mat_rand(ptr, sz) : ptr;
+	return randomize ? si_mat_rand(ptr, sz) : ptr;
 }
 
-float** fp_mat_rand(float** mat, size_t sz) {
+short int** si_mat_rand(short int** mat, size_t sz) {
 	size_t i, j;
 	
 	/* Randomize each floating point cell
          * with random value [0,1] */
 	for(i = 0; i < sz; i++) {
 		for(j = 0; j < sz; j++)
-			mat[i][j] = (rand() / (float) RAND_MAX) * (1);
+			mat[i][j] = (short int)((rand() / (float) RAND_MAX) * (100));
 	}
 
 	return mat;
 }
 
-void free_fp_mat(float** mat, size_t sz) {
+void free_si_mat(short int** mat, size_t sz) {
 	size_t i;
 	
 	/* Note the use of _mm_free() instead of 
@@ -55,20 +57,20 @@ void free_fp_mat(float** mat, size_t sz) {
 	free(mat);
 }
 
-void print_fp_mat(float** mat, size_t sz) {
+void print_si_mat(short int** mat, size_t sz) {
 	size_t i, j;
 
 	printf("Matrix:\n");
 	for(i = 0; i < sz; i++) {
 		for(j = 0; j < sz; j++)
-			printf("%f ", mat[i][j]);
+			printf("%hd ", mat[i][j]);
 		printf("\n");
 	}
 }
 
-float fp_mat_checksum(float** mat, size_t sz) {
+short int si_mat_checksum(short int** mat, size_t sz) {
 	size_t i, j;
-	float ret = 0.f;
+	short int ret = 0;
 
 	for(i = 0; i < sz; i++) {
 		for(j = 0; j < sz; j++)
@@ -78,7 +80,7 @@ float fp_mat_checksum(float** mat, size_t sz) {
 	return ret;
 }
 
-static void calc_block(float** a, size_t a_block_size, size_t a_block_index, size_t b_block_index, size_t b_block_size, float** b, float** c, size_t size) {
+/*static void calc_block(float** a, size_t a_block_size, size_t a_block_index, size_t b_block_index, size_t b_block_size, float** b, float** c, size_t size) {
 	simd_f8 a_r, b_r;
 	simd_f8 c_local[AVX_REG_A_MAX][AVX_REG_B_MAX] = {{{0.0}}};
 	size_t row_count, a_bi, b_bi;
@@ -104,7 +106,7 @@ static void calc_block(float** a, size_t a_block_size, size_t a_block_index, siz
 float** mult_fp_mat(float** a, float** b, size_t sz) {
 	float** c = gen_fp_mat(sz, 0);
 	
-	/* block count, max, remaining for a and b  matrices */
+	/ block count, max, remaining for a and b  matrices /
 	size_t bc_a = 0, bc_b = 0;
 	size_t bc_a_max = sz / (AVX_REG_A_MAX);
 	size_t bc_b_max = sz / (AVX_REG_B_MAX * 8);
@@ -120,10 +122,10 @@ float** mult_fp_mat(float** a, float** b, size_t sz) {
 	}
 
 	return c;
-}
+}*/
 
-float** mult_fp_mat_naive(float** a, float** b, size_t sz) {
-	float** c = gen_fp_mat(sz, 0);
+short int** mult_si_mat_naive(short int** a, short int** b, size_t sz) {
+	short int** c = gen_fp_mat(sz, 0);
 	size_t i, j, k;
 
 	/* Compute dot product */

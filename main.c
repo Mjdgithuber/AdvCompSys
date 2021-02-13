@@ -3,10 +3,29 @@
 #include <sys/time.h>
 
 #include "fp_matrix.h"
+#include "si_matrix.h"
 
 #define PRINT_MAT 0
 
-void run() {
+void run_fixed_point() {
+	struct timeval t1, t2;
+	short int **m_1, **m_2, **m_res;
+	int size = 8;
+
+	m_1 = gen_si_mat(size, 1);
+	m_2 = gen_si_mat(size, 1);
+
+	gettimeofday(&t1, NULL);
+	m_res = mult_si_mat_naive(m_1, m_2, size);
+	gettimeofday(&t2, NULL);
+	printf("NAIVE Checksum Fixed Point: %hd in %u seconds\n", si_mat_checksum(m_res, size), (unsigned int)(t2.tv_sec - t1.tv_sec));
+
+	free_si_mat(m_1, size);
+	free_si_mat(m_2, size);
+	free_si_mat(m_res, size);
+}
+
+void run_floating_point() {
 	struct timeval t1, t2;
 	float **m_1, **m_2, **m_res;
 	int size = 1000;
@@ -44,7 +63,7 @@ void run() {
 }
 
 int main() {
-	run();
+	run_fixed_point();
 
 	return 0;
 }

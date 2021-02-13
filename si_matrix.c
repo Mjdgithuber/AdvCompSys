@@ -125,7 +125,7 @@ float** mult_fp_mat(float** a, float** b, size_t sz) {
 }*/
 
 short int** mult_si_mat_naive(short int** a, short int** b, size_t sz) {
-	short int** c = gen_fp_mat(sz, 0);
+	short int** c = gen_si_mat(sz, 0);
 	size_t i, j, k;
 
 	/* Compute dot product */

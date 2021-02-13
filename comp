@@ -1,0 +1,2 @@
+gcc main.c fp_matrix.c -o emma -mavx
+gcc -S -masm=intel -mavx main.c

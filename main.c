@@ -1,7 +1,6 @@
-/*#include <x86intrin.h>*/
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
+#include <sys/time.h>
 
 #include "fp_matrix.h"
 
@@ -10,8 +9,7 @@
 void run() {
 	struct timeval t1, t2;
 	float **m_1, **m_2, **m_res;
-	int i, j;
-	int size = 5500;
+	int size = 1000;
 
 	m_1 = gen_fp_mat(size, 1);
 	m_2 = gen_fp_mat(size, 1);
@@ -20,11 +18,16 @@ void run() {
 	//print_fp_mat(m_2, size);
 
 	if(PRINT_MAT) {
-		print_mat(m_1, size);
-		print_mat(m_2, size);
+		print_fp_mat(m_1, size);
+		print_fp_mat(m_2, size);
 	}
 
-	//naive_mult(m_1, m_2, size);
+	gettimeofday(&t1, NULL);
+	m_res = mult_fp_mat_naive(m_1, m_2, size);
+	gettimeofday(&t2, NULL);
+	printf("NAIVE Checksum: %f in %u seconds\n", fp_mat_checksum(m_res, size), (unsigned int)(t2.tv_sec - t1.tv_sec));
+	free_fp_mat(m_res, size);
+
 	
 	//printf("A Checksum: %f\n", fp_mat_checksum(m_1, size));
 	//printf("B Checksum: %f\n", fp_mat_checksum(m_2, size));
@@ -32,7 +35,7 @@ void run() {
 	gettimeofday(&t1, NULL);
 	m_res = mult_fp_mat(m_1, m_2, size);
 	gettimeofday(&t2, NULL);
-	printf("SIMD  Checksum: %f in %u seconds\n", fp_mat_checksum(m_res, size), t2.tv_sec - t1.tv_sec);
+	printf("SIMD  Checksum: %f in %u seconds\n", fp_mat_checksum(m_res, size), (unsigned int)(t2.tv_sec - t1.tv_sec));
 	//print_fp_mat(m_res, size);
 
 	free_fp_mat(m_1, size);
@@ -42,4 +45,6 @@ void run() {
 
 int main() {
 	run();
+
+	return 0;
 }

@@ -15,8 +15,6 @@
 #define AVX_REG_A_MAX 3
 #define AVX_REG_B_MAX 4
 
-typedef float simd_si8 __attribute__ ((vector_size (16)));
-
 short int** gen_si_mat(size_t sz, BOOL randomize) {
 	size_t i;
 	
@@ -78,12 +76,12 @@ short int si_mat_checksum(short int** mat, size_t sz) {
 	return ret;
 }
 
-static void print_num(__m128i num) {
-	int i;
 
-	for(i = 0; i < 8; i++)
-		printf("%hd ", *( ((short int*)(&num)) + i) );
-	printf("\n");
+static void print_num(__m128i num) {
+int i;
+for(i = 0; i < 8; i++)
+printf("%hd ", *( ((short int*)(&num)) + i) );
+printf("\n");
 }
 
 static void calc_block(short int** a, size_t a_block_size, size_t a_block_index, size_t b_block_index, size_t b_block_size, short int** b, short int** c, size_t size) {
@@ -91,31 +89,24 @@ static void calc_block(short int** a, size_t a_block_size, size_t a_block_index,
 	__m128i c_local[AVX_REG_A_MAX][AVX_REG_B_MAX] = {{{0.0}}};
 	size_t row_count, a_bi, b_bi;
 
-	
-	int i;
-
-	printf("Starting block (b block size: %u):\n", b_block_size);
 	for(row_count = 0; row_count < size; row_count++) {
 		for(b_bi = 0; b_bi < b_block_size; b_bi++) {
 			b_r = _mm_loadu_si128((__m128i*) (b[row_count] + 8*(b_bi + b_block_index * AVX_REG_B_MAX)));
-			//b_r = _mm256_load_ps(b[row_count] + 8*(b_bi + b_block_index * AVX_REG_B_MAX));
-			//print_num(b_r);if(b_bi > 1) return;
+			//print_num(b_r);
 			for(a_bi = 0; a_bi < a_block_size; a_bi++) {
 				a_r = _mm_set1_epi16(a[a_bi + a_block_index*AVX_REG_A_MAX][row_count]);
-				//a_r = _mm256_broadcast_ss(a[a_bi + a_block_index*AVX_REG_A_MAX] + row_count);
-				c_local[a_bi][b_bi] += _mm_mullo_epi16(a_r, b_r);
-				//c_local[a_bi][b_bi] += _mm256_mul_ps(a_r, b_r);
+				//print_num(a_r);
+				
+				c_local[a_bi][b_bi] = _mm_add_epi16(c_local[a_bi][b_bi], _mm_mullo_epi16(a_r, b_r));
+				//c_local[a_bi][b_bi] += _mm_mullo_epi16(a_r, b_r);
 			}
 		}
 	}
 
 	for(a_bi = 0; a_bi < a_block_size; a_bi++) {
 		for(b_bi = 0; b_bi < b_block_size; b_bi++) {
-			//for(i = 0; i < 8; i++)
-				//printf("%hd\n", *(((short int*)(&c_local[a_bi][b_bi]))+i) );
-			//printf("\n");
+			print_num(c_local[a_bi][b_bi]);
 			_mm_store_si128((__m128i*) (&c[a_bi + a_block_index*AVX_REG_A_MAX][(b_bi + b_block_index*AVX_REG_B_MAX)*8]), c_local[a_bi][b_bi]);
-			//_mm256_store_ps(&c[a_bi + a_block_index*AVX_REG_A_MAX][(b_bi + b_block_index*AVX_REG_B_MAX)*8], c_local[a_bi][b_bi]);
 		}
 	}
 }

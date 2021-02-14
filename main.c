@@ -92,6 +92,11 @@ int main(int argc, char** argv) {
 	BOOL flo = strchr(argv[2], 'f') ? 1 : 0;
 	BOOL pri = strchr(argv[2], 'p') ? 1 : 0;
 	size_t sz = atoi(argv[1]);
+
+	if(sz % 8) {
+		printf("Input size must be a multiple of 8!\n");
+		return 0;
+	}
 	
 	/* if method not specified run both */
 	if(!simd && !naive) {

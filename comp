@@ -1,2 +1,2 @@
-gcc main.c fp_matrix.c si_matrix.c -o emma -mavx -Wall
+gcc main.c fp_matrix.c si_matrix.c -o prog -mavx -Wall
 gcc -S -masm=intel -mavx main.c

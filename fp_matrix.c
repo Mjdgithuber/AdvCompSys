@@ -135,13 +135,7 @@ float** mult_fp_mat(float** a, float** b, size_t sz) {
                          * calculated both measured in simd width.  The size
                          * of the block calculated is a_block_size*b_block_size.
                          * a_block_index and b_block_index are used to specify
-                         * the location of where the block starts in c
-                         *
-                         * Params:
-                         * a - matrix a
-                         * b - matrix b
-                         * c - matrix c 
-                         * a_block_size - */
+                         * the location of where the block starts in c */
 			calc_block(a, b, c, a_block_size, b_block_size, bc_a, bc_b, sz);
 		}
 	}

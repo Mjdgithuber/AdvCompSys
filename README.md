@@ -34,7 +34,14 @@ Description of flags:
 * p - Print out matrices (this should only be used for small matrices)
 
 Example to run SIMD & naive implementation for floating and fixed point matrices with size of 128.
-`$ ./prog 128 snif`
+```
+$ ./prog 128 snif
+NAIVE Checksum Fixed Point: -28805 in 0 seconds
+SIMD  Checksum Fixed Point: -28805 in 0 seconds
+NAIVE Checksum: 524038.656250 in 0 seconds
+SIMD  Checksum: 524038.656250 in 0 seconds
+```
+The checksums can be used to verify that both the naive and SIMD implementations return the same result.
 
 **NOTE:** Flags have no delimiters so they should be entered all in one string (order doesn't matter).  Also if neither n -or- s is specified then both with be run, the same goes for the i and f flags.
 

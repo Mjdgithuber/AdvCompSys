@@ -78,22 +78,35 @@ float fp_mat_checksum(float** mat, size_t sz) {
 	return ret;
 }
 
-static void calc_block(float** a, size_t a_block_size, size_t a_block_index, size_t b_block_index, size_t b_block_size, float** b, float** c, size_t size) {
+static void calc_block(float** a, float** b, float** c, size_t a_block_size, size_t b_block_size, size_t a_block_index, size_t b_block_index, size_t size) {
+	/* local simd scratch temps */
 	simd_f8 a_r, b_r;
-	simd_f8 c_local[AVX_REG_A_MAX][AVX_REG_B_MAX] = {{{0.0}}};
+
+	/* row count and block index offsets */
 	size_t row_count, a_bi, b_bi;
 
+	/* local cache for faster storage while computing block */
+	simd_f8 c_local[AVX_REG_A_MAX][AVX_REG_B_MAX] = {{{0.0}}};
+
+	/* must go through entire matrix to calculate a block of c */
 	for(row_count = 0; row_count < size; row_count++) {
 		for(b_bi = 0; b_bi < b_block_size; b_bi++) {
+			/* load 8 floats (simd) from matrix b on this particular row and block offset.
+                         * NOTE: this is going down matrix b */
 			b_r = _mm256_load_ps(b[row_count] + 8*(b_bi + b_block_index * AVX_REG_B_MAX));
 
 			for(a_bi = 0; a_bi < a_block_size; a_bi++) {
+				/* load simd reg by broadcasting a value from a. NOTE: this is going across
+                                 * matrix a. */
 				a_r = _mm256_broadcast_ss(a[a_bi + a_block_index*AVX_REG_A_MAX] + row_count);
+
+				/* add to local cache at block offsets */
 				c_local[a_bi][b_bi] += _mm256_mul_ps(a_r, b_r);
 			}
 		}
 	}
 
+	/* store local sum into c */
 	for(a_bi = 0; a_bi < a_block_size; a_bi++) {
 		for(b_bi = 0; b_bi < b_block_size; b_bi++) {
 			_mm256_store_ps(&c[a_bi + a_block_index*AVX_REG_A_MAX][(b_bi + b_block_index*AVX_REG_B_MAX)*8], c_local[a_bi][b_bi]);
@@ -115,7 +128,21 @@ float** mult_fp_mat(float** a, float** b, size_t sz) {
 		for(bc_b = 0; bc_b < bc_b_max + (bc_b_r ? 1 : 0); bc_b++) {
 			int b_block_size = bc_b < bc_b_max ? AVX_REG_B_MAX : bc_b_r;
 			int a_block_size = bc_a < bc_a_max ? AVX_REG_A_MAX : bc_a_r;
-			calc_block(a, a_block_size, bc_a, bc_b, b_block_size, b, c, sz);
+
+			/* calculate one "block" of c at a time to maximize
+                         * cache efficiency.  a_block_size and b_block_size
+                         * are used to specify the size the "block" that is
+                         * calculated both measured in simd width.  The size
+                         * of the block calculated is a_block_size*b_block_size.
+                         * a_block_index and b_block_index are used to specify
+                         * the location of where the block starts in c
+                         *
+                         * Params:
+                         * a - matrix a
+                         * b - matrix b
+                         * c - matrix c 
+                         * a_block_size - */
+			calc_block(a, b, c, a_block_size, b_block_size, bc_a, bc_b, sz);
 		}
 	}
 

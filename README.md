@@ -33,7 +33,7 @@ Description of flags:
 * f - Run floating point (4 byte) matrices
 * p - Print out matrices (this should only be used for small matrices)
 
-Example to run both SIMD & naive implementation for floating and fixed point matrices with a size of 128.
+Example to run SIMD & naive implementation for floating and fixed point matrices with size of 128.
 `$ ./prog 128 snif`
 
 **NOTE:** Flags have no delimiters so they should be entered all in one string (order doesn't matter).  Also if neither n -or- s is specified then both with be run, the same goes for the i and f flags.

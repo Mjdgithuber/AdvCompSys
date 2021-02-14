@@ -76,21 +76,34 @@ short int si_mat_checksum(short int** mat, size_t sz) {
 	return ret;
 }
 
-static void calc_block(short int** a, size_t a_block_size, size_t a_block_index, size_t b_block_index, size_t b_block_size, short int** b, short int** c, size_t size) {
+static void calc_block(short int** a, short int** b, short int** c, size_t a_block_size, size_t b_block_size, size_t a_block_index, size_t b_block_index, size_t size) {
+	/* local simd scratch temps */
 	__m128i a_r, b_r;
-	__m128i c_local[AVX_REG_A_MAX][AVX_REG_B_MAX] = {{{0.0}}};
+
+	/* row count and block index offsets */
 	size_t row_count, a_bi, b_bi;
 
+	/* local cache for faster storage while computing block */
+	__m128i c_local[AVX_REG_A_MAX][AVX_REG_B_MAX] = {{{0.0}}};
+
+	/* must go through entire matrix to calculate a block of c */
 	for(row_count = 0; row_count < size; row_count++) {
 		for(b_bi = 0; b_bi < b_block_size; b_bi++) {
+			/* load 8 short ints (simd) from matrix b on this particular row and block offset.
+                         * NOTE: this is going down matrix b */
 			b_r = _mm_loadu_si128((__m128i*) (b[row_count] + 8*(b_bi + b_block_index * AVX_REG_B_MAX)));
 			for(a_bi = 0; a_bi < a_block_size; a_bi++) {
+				/* load simd reg by broadcasting a value from a. NOTE: this is going across
+                                 * matrix a. */
 				a_r = _mm_set1_epi16(a[a_bi + a_block_index*AVX_REG_A_MAX][row_count]);
+
+				/* add to local cache at block offsets */
 				c_local[a_bi][b_bi] = _mm_add_epi16(c_local[a_bi][b_bi], _mm_mullo_epi16(a_r, b_r));
 			}
 		}
 	}
 
+	/* store local sum into c */
 	for(a_bi = 0; a_bi < a_block_size; a_bi++) {
 		for(b_bi = 0; b_bi < b_block_size; b_bi++) {
 			_mm_store_si128((__m128i*) (&c[a_bi + a_block_index*AVX_REG_A_MAX][(b_bi + b_block_index*AVX_REG_B_MAX)*8]), c_local[a_bi][b_bi]);
@@ -112,7 +125,15 @@ short int** mult_si_mat(short int** a, short int** b, size_t sz) {
 		for(bc_b = 0; bc_b < bc_b_max + (bc_b_r ? 1 : 0); bc_b++) {
 			int b_block_size = bc_b < bc_b_max ? AVX_REG_B_MAX : bc_b_r;
 			int a_block_size = bc_a < bc_a_max ? AVX_REG_A_MAX : bc_a_r;
-			calc_block(a, a_block_size, bc_a, bc_b, b_block_size, b, c, sz);
+
+			/* calculate one "block" of c at a time to maximize
+                         * cache efficiency.  a_block_size and b_block_size
+                         * are used to specify the size the "block" that is
+                         * calculated both measured in simd width.  The size
+                         * of the block calculated is a_block_size*b_block_size.
+                         * a_block_index and b_block_index are used to specify
+                         * the location of where the block starts in c */
+			calc_block(a, b, c, a_block_size, b_block_size, bc_a, bc_b, sz);
 		}
 	}
 

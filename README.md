@@ -1,4 +1,4 @@
-# Project 1: SIMD matrix multiplication:
+# SIMD matrix multiplication:
 This project involves matrix multiplication using intel intrinsics for both floating and fixed (2 byte) point data.
 
 ## Code Structure

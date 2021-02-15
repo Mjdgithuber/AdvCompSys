@@ -103,3 +103,6 @@ The checksums can be used to verify that both the naive and SIMD implementations
 **NOTE:** Flags have no delimiters so they should be entered all in one string (order doesn't matter).  Also if neither n -or- s is specified then both with be run, the same goes for the i and f flags.
 
 ### Results
+Here are the results for the running time of both the SIMD and naive implementations for both fixed and floating point matrices measured in seconds.  There are two graphs displaying the same data for more context.
+
+

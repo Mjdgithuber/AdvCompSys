@@ -9,7 +9,7 @@ As I have decided to do this in C which doesn't support template syntax, there a
 #### SIMD Functions
 At the top of both fp_matrix.c and si_matrix.c you will see `#include <immintrin.h>` which will allow use of Intel Intrinsics.  The following is a description of the wrappers used to perform the multiplication.
 
-##### Fixed Point
+##### _Fixed Point_
 All fixed point instructions used here require SSE2.
 
 `_mm_loadu_si128(__m128i const* mem_addr)` - Load 128-bits of integer data from memory into dst. mem_addr does not need to be aligned on any particular boundary.
@@ -20,7 +20,7 @@ All fixed point instructions used here require SSE2.
 
 `_mm_store_si128(__m128i* mem_addr, __m128i a)` - Store 128-bits of integer data from a into memory. mem_addr must be aligned on a 16-byte boundary or a general-protection exception may be generated.
 
-##### Floating Point
+##### _Floating Point_
 All floating point instructions used here require AVX.
 
 `_mm256_load_ps(float const * mem_addr)` - Load 256-bits (composed of 8 packed single-precision (32-bit) floating-point elements) from memory into dst. mem_addr must be aligned on a 32-byte boundary or a general-protection exception may be generated.
@@ -31,8 +31,34 @@ All floating point instructions used here require AVX.
 
 `_mm256_store_ps(float * mem_addr, __m256 a)` - Store 256-bits (composed of 8 packed single-precision (32-bit) floating-point elements) from a into memory. mem_addr must be aligned on a 32-byte boundary or a general-protection exception may be generated.
 
-#### Common
+##### _Common_
 Many of the Intel intrinsic instructions require boundary alignment in order to work properly, in cases where it isn't aligned (and alignment is required) it could cause a seg fault.  At the top of both files there is a macro definition for `BOUNDARY_ALIGNMENT` that will ensure that the matrix's cells will be properly aligned with the use of `_mm_malloc(int size, int align)` (OS independent) and `_mm_free (void *p)`.
+
+#### Cache Optimization
+Cache optimizations are only implemented for SIMD multiplication.  One of the main goals here is to load a value into the cache and use it multiple times to avoid having many cache misses.  Below is a snippet of code from fp_matrix.c with modified comments.  The algorithm is the same for fixed and floating point.  A technique called loop nest optimization ([LNO](https://en.wikipedia.org/wiki/Loop_nest_optimization)) is used to maximize cache efficiency this is also called register blocking.  For a more detailed look at optimizations for matrix multication visit [Nadav Rotem's Gist](https://gist.github.com/nadavrot/5b35d44e8ba3dd718e595e40184d03f0).
+
+```c
+/* must go through entire matrix to calculate a piece of c (the result matrix) */
+for(row_count = 0; row_count < size; row_count++) { // loop 1
+  for(b_bi = 0; b_bi < b_block_size; b_bi++) { // loop 2
+    /* load 8 short ints (simd) from matrix b on this particular row and block offset.
+     * NOTE: this is going down matrix b */
+    b_r = _mm_loadu_si128((__m128i*) (b[row_count] + 8*(b_bi + b_block_index * AVX_REG_B_MAX)));
+    for(a_bi = 0; a_bi < a_block_size; a_bi++) { // loop 3
+      /* load simd reg by broadcasting a value from a. NOTE: this is going across
+       * matrix a. */
+      a_r = _mm_set1_epi16(a[a_bi + a_block_index*AVX_REG_A_MAX][row_count]);
+      
+      /* add to local cache at block offsets */
+      c_local[a_bi][b_bi] = _mm_add_epi16(c_local[a_bi][b_bi], _mm_mullo_epi16(a_r, b_r));
+    }
+  }
+}
+```
+
+In this series of loops you will first notice that a SIMD width float (8 floats) from `b` is loaded into `b_r` and therefore also loaded into the cache.  In loop 3 a value from `a` is brodcast into `a_r`.  Then, `a_r` and `b_r` are multiplied together and are added to `c_local` which is on the stack (to allow for faster read/writes).  The critical part here is that a single row in `b` is being re-used for the entirety of loop 3, and for the next iteration of loop 1, loop 3 will won't require any additions to the cache (on most iterations) because `a[a_bi + a_block_index*AVX_REG_A_MAX]` will already be in the cache from the previous iteration (note that `[row_count]` offset will be in the same cache line every 8 iterations of loop 1).  For a full context of the above code snippet view fp_matrix.c.
+
+Changes to `a_block_size` and `b_block_size` tweak the ratio of memory to arithmetic instructions.  The maximum for both of these numbers are defined at the top of the source files as `AVX_REG_A_MAX` and `AVX_REG_B_MAX` respectively.  The more arithmetic instructions per memory instruction the better.
 
 ### Build & Requirements
 In order to run this code your CPU must support the following flags: SSE2 (for fixed point), and AVX (for fixed point).

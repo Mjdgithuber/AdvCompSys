@@ -3,6 +3,37 @@
 ## Project 1: SIMD matrix multiplication:
 This project involves matrix multiplication using intel intrinsics for both floating and fixed (2 byte) point data.
 
+### Code Structure
+As I have decided to do this in C which doesn't support template syntax, there are two pairs of files that contain the implementation of fixed and floating point matrix multiplication.  The floating point implementation is contained within fp_matrix.c file while the fixed point is implemented in si_matrix.c (si stands for short int).  Their respective header files contain common functions to generate, free, randomize, perform a checksum, print, and multiply matrices (both with and without SIMD & optimizations).  The naive multiplication functions are standard and don't require a detailed description. 
+
+#### SIMD Functions
+At the top of both fp_matrix.c and si_matrix.c you will see `#include <immintrin.h>` which will allow use of Intel Intrinsics.  The following is a description of the wrappers used to perform the multiplication.
+
+##### Fixed Point
+All fixed point instructions used here require SSE2.
+
+`_mm_loadu_si128(__m128i const* mem_addr)` - Load 128-bits of integer data from memory into dst. mem_addr does not need to be aligned on any particular boundary.
+
+`_mm_set1_epi16(short a)` - Broadcast 16-bit integer a to all all elements of dst. This intrinsic may generate vpbroadcastw.
+
+`_mm_add_epi16(__m128i a, __m128i b)` - Add packed 16-bit integers in a and b, and store the results in dst.
+
+`_mm_store_si128(__m128i* mem_addr, __m128i a)` - Store 128-bits of integer data from a into memory. mem_addr must be aligned on a 16-byte boundary or a general-protection exception may be generated.
+
+##### Floating Point
+All floating point instructions used here require AVX.
+
+`_mm256_load_ps(float const * mem_addr)` - Load 256-bits (composed of 8 packed single-precision (32-bit) floating-point elements) from memory into dst. mem_addr must be aligned on a 32-byte boundary or a general-protection exception may be generated.
+
+`_mm256_broadcast_ss(float const * mem_addr)` - Broadcast a single-precision (32-bit) floating-point element from memory to all elements of dst.
+
+`_mm256_mul_ps(__m256 a, __m256 b)` - Multiply packed single-precision (32-bit) floating-point elements in a and b, and store the results in dst.
+
+`_mm256_store_ps(float * mem_addr, __m256 a)` - Store 256-bits (composed of 8 packed single-precision (32-bit) floating-point elements) from a into memory. mem_addr must be aligned on a 32-byte boundary or a general-protection exception may be generated.
+
+#### Common
+Many of the Intel intrinsic instructions require boundary alignment in order to work properly, in cases where it isn't aligned (and alignment is required) it could cause a seg fault.  At the top of both files there is a macro definition for `BOUNDARY_ALIGNMENT` that will ensure that the matrix's cells will be properly aligned with the use of `_mm_malloc(int size, int align)` (OS independent) and `_mm_free (void *p)`.
+
 ### Build & Requirements
 In order to run this code your CPU must support the following flags: SSE2 (for fixed point), and AVX (for fixed point).
 

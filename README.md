@@ -113,6 +113,8 @@ It takes too long to run the naive implementations for larger matrix sizes so th
 ![](images/line_simd.png)
 ![](images/stack_simd.png)
 
+I'm not sure what caused the large uptick going from 5000 to 6000 (seen more readily in the line plot), but for the most part the shape of both graphs is expected.
+
 ## Analysis and Conclusion
 As can be seen in the results, through the use of SIMD instructions and cache optimization running time can be vastly improved.  One interesting anomaly is that the SIMD floating point multiplication is faster than the fixed point multiplication in my program.
 

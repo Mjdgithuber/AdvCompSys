@@ -110,6 +110,9 @@ Here are the results for the running time of both the SIMD and naive implementat
 
 It takes too long to run the naive implementations for larger matrix sizes so the following are two graphs (again with the same data) for just the SIMD implementations.
 
+![](images/line_simd.png)
+![](images/stack_simd.png)
+
 ## Analysis and Conclusion
 As can be seen in the results, through the use of SIMD instructions and cache optimization running time can be vastly improved.  One interesting anomaly is that the SIMD floating point multiplication is faster than the fixed point multiplication in my program.
 

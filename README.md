@@ -105,4 +105,7 @@ The checksums can be used to verify that both the naive and SIMD implementations
 ### Results
 Here are the results for the running time of both the SIMD and naive implementations for both fixed and floating point matrices measured in seconds.  There are two graphs displaying the same data for more context.
 
+![](images/line_simd_naive.png)
+![](images/stack_simd_naive.png)
 
+It takes too long to run the naive implementations for larger matrix sizes so the following are two graphs (again with the same data) for just the SIMD implementations.
